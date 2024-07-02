@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BanAppealManager.Main", "BanAppealManager.Main\BanAppealManager.Main.csproj", "{633640C7-52A2-45F5-9586-414A465EEE06}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BanAppealManager.UI", "BanAppealManager.UI\BanAppealManager.UI.csproj", "{76341F64-4EAD-4DEB-835C-96E6653DC3C0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{633640C7-52A2-45F5-9586-414A465EEE06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{633640C7-52A2-45F5-9586-414A465EEE06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{633640C7-52A2-45F5-9586-414A465EEE06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{633640C7-52A2-45F5-9586-414A465EEE06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76341F64-4EAD-4DEB-835C-96E6653DC3C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76341F64-4EAD-4DEB-835C-96E6653DC3C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76341F64-4EAD-4DEB-835C-96E6653DC3C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76341F64-4EAD-4DEB-835C-96E6653DC3C0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
