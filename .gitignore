@@ -1,0 +1,80 @@
+# Rider specific files
+.idea/
+.idea/**
+*.sln.iml
+*.user
+*.suo
+*.sln.docstates
+*.vcxproj.user
+*.code-workspace
+# Uncomment if you have tasks that create the following file
+# *.tasks.json
+
+# JetBrains Rider settings
+.idea/
+*.sln.iml
+
+# .NET
+**/project.lock.json
+**/project.fragment.lock.json
+**/artifacts/
+**/bin/
+**/obj/
+**/*.dll
+**/*.exe
+**/*.pdb
+**/*.cache
+**/*.log
+**/*.vspscc
+**/*.vspcc
+**/*.suo
+**/*.user
+**/*.userosscache
+**/*.sln.docstates
+
+# ASP.NET Scaffolding
+**/ScaffoldingReadMe.txt
+
+# Azure
+**/LocalSettings.json
+# Uncomment if necessary
+# PackageManagementFileSystemCaches/
+
+# Backup & Report Files
+**/*.bak
+**/*.iobj
+**/*.pdb
+**/*.log
+**/*.cache
+**/*.dmp
+**/*.mdf
+**/*.ldf
+**/*.ndf
+**/*.ncb
+**/*.sbr
+**/*.unsuccessfulbuild
+**/*.unsuccessfulpublish
+
+# VS Code directories
+.vscode/
+
+# NPM
+node_modules/
+
+# Yarn
+.yarn/
+.yarnrc
+
+# Logs
+**/*.log
+npm-debug.log*
+
+# Webpack
+webpack-stats.json
+coverage/
+
+# Publish/Web Output
+**/wwwroot/
+**/dist/
+**/tmp/
+**/temp/
