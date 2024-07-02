@@ -13,10 +13,6 @@
       </Content>
     </ItemGroup>
 
-<!--    <ItemGroup>-->
-<!--      <ProjectReference Include="..\BanAppealHelper.Main\BanAppealHelper.Main.csproj" />-->
-<!--    </ItemGroup>-->
-
     <ItemGroup>
       <None Update=".env">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

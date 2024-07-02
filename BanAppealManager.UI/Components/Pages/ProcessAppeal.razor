@@ -1,0 +1,142 @@
+@page "/processappeal"
+@using BanAppealManager.Main
+@inject BanAppealService BanAppealService
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>Process Appeal</PageTitle>
+
+<div class="container mt-5">
+    <h2>Process Appeal</h2>
+    <EditForm Model="@appealForm" OnValidSubmit="HandleSubmit" OnInvalidSubmit="HandleInvalidSubmit" FormName="AppealProcessForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="mb-3">
+            <label for="appealUrl" class="form-label">Appeal URL</label>
+            <InputText id="appealUrl" class="form-control" @bind-Value="appealForm.AppealUrl" required />
+        </div>
+        <div class="mb-3">
+            <label for="ahelpMessages" class="form-label">Ahelp Messages</label>
+            <InputTextArea id="ahelpMessages" class="form-control" @bind-Value="appealForm.AhelpMessages" rows="4" />
+        </div>
+        <div class="mb-3">
+            <label for="ahelpLink" class="form-label">Ahelp Link</label>
+            <InputText id="ahelpLink" class="form-control" @bind-Value="appealForm.AhelpLink" />
+        </div>
+        
+        <!-- Submit Button with Loading Indicator -->
+        <button class="btn btn-primary" type="submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
+                <span role="status">Loading...</span>
+            }
+            else
+            {
+                <span>Process Appeal</span>
+            }
+        </button>
+        
+        <!-- Spinner below the submit button -->
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center mt-3">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Fetching data...</span>
+                </div>
+                <span class="ms-2">Fetching data...</span>
+            </div>
+        }
+    </EditForm>
+
+    <div class="mt-4" style="display:@(string.IsNullOrEmpty(generatedTemplate) ? "none" : "block")">
+        <h4>Generated Template</h4>
+        <textarea class="form-control" id="generatedTemplate" rows="@templateRows" @bind="generatedTemplate"></textarea>
+        <button class="btn btn-secondary mt-2" @onclick="CopyToClipboard">Copy Template</button>
+    </div>
+</div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    <div class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true" @ref="toastElement">
+        <div class="d-flex">
+            <div class="toast-body">
+                @submitResult
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public AppealForm appealForm { get; set; } = new AppealForm();
+    
+    private string generatedTemplate;
+    private string submitResult;
+    private int templateRows = 6;
+    private ElementReference toastElement;
+    private bool showToast = false;
+    private bool isLoading = false;
+
+    private async Task HandleSubmit()
+    {
+        isLoading = true;
+        StateHasChanged(); // Force re-render to show loading spinner
+        submitResult = "Processing...";
+        try
+        {
+            generatedTemplate = await BanAppealService.ProcessAppealAsync(
+                appealForm.AppealUrl,
+                string.IsNullOrEmpty(appealForm.AhelpMessages) ? "No aHelp occurred." : appealForm.AhelpMessages,
+                string.IsNullOrEmpty(appealForm.AhelpLink) ? "No aHelp" : appealForm.AhelpLink
+            );
+            submitResult = "Success - Appeal processed";
+            AdjustTextareaSize();
+        }
+        catch (Exception ex)
+        {
+            submitResult = $"Error processing appeal: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Force re-render to hide loading spinner
+            showToast = true;
+        }
+    }
+
+    private void HandleInvalidSubmit(EditContext editContext)
+    {
+        submitResult = "Form is invalid";
+        showToast = true;
+    }
+
+    private async Task CopyToClipboard()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", generatedTemplate);
+    }
+
+    private void AdjustTextareaSize()
+    {
+        var lineCount = generatedTemplate.Split('\n').Length;
+        templateRows = lineCount < 6 ? 6 : lineCount;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (showToast)
+        {
+            showToast = false;
+            var toast = await JS.InvokeAsync<IJSObjectReference>("bootstrap.Toast.getOrCreateInstance", toastElement);
+            await toast.InvokeVoidAsync("show");
+        }
+    }
+
+    public class AppealForm
+    {
+        [Required]
+        public string AppealUrl { get; set; }
+        public string AhelpMessages { get; set; }
+        public string AhelpLink { get; set; }
+    }
+}

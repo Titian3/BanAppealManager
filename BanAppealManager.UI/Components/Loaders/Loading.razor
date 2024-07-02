@@ -1,0 +1,43 @@
+@* <!-- Loading.razor --> *@
+@* <div class="loading-overlay" style="@(IsVisible ? "display: flex;" : "display: none;")"> *@
+@*     @if (LoadingTemplate != null) *@
+@*     { *@
+@*         @LoadingTemplate *@
+@*     } *@
+@*     else *@
+@*     { *@
+@*         <div class="spinner-border"></div> *@
+@*         <span style="display: inline-block; vertical-align: super">@LoadingText</span> *@
+@*     } *@
+@* </div> *@
+@* *@
+@* <div> *@
+@*     @ChildContent *@
+@* </div> *@
+@* *@
+@* @code { *@
+@*     private bool IsVisible { get; set; } = false; *@
+@* *@
+@*     [Parameter] *@
+@*     public string LoadingText { get; set; } = "Loading..."; *@
+@* *@
+@*     [Parameter] *@
+@*     public RenderFragment LoadingTemplate { get; set; } *@
+@* *@
+@*     [Parameter] *@
+@*     public RenderFragment ChildContent { get; set; } *@
+@* *@
+@*     public void StartLoading() *@
+@*     { *@
+@*         IsVisible = true; *@
+@*         StateHasChanged(); *@
+@*         Console.WriteLine("Loading started."); *@
+@*     } *@
+@* *@
+@*     public void StopLoading() *@
+@*     { *@
+@*         IsVisible = false; *@
+@*         StateHasChanged(); *@
+@*         Console.WriteLine("Loading stopped."); *@
+@*     } *@
+@* } *@
