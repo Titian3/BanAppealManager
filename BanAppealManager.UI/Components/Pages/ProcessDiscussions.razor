@@ -1,0 +1,38 @@
+@page "/processdiscussion"
+@using BanAppealManager.Main
+@inject BanAppealService BanAppealService
+
+@* Just a front end mock, Needs Backend TODO *@
+<PageTitle>Process Discussion</PageTitle>
+
+<div class="container mt-5">
+    <h2>Process Discussion</h2>
+    <EditForm Model="@decisionForm" OnValidSubmit="HandleDecisionSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="mb-3">
+            <label for="decisionUrl" class="form-label">Appeal Discussion URL</label>
+            <InputText id="decisionUrl" class="form-control" @bind-Value="decisionForm.DecisionUrl" required />
+        </div>
+        <div class="mb-3">
+            <label for="generatedMessage" class="form-label">Generated Message</label>
+            <InputTextArea id="generatedMessage" class="form-control" @bind-Value="decisionForm.GeneratedMessage" rows="6" />
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Message</button>
+    </EditForm>
+</div>
+
+@code {
+    private DecisionForm decisionForm = new();
+
+    private async Task HandleDecisionSubmit()
+    {
+        // Implement decision submit logic
+    }
+
+    public class DecisionForm
+    {
+        public string DecisionUrl { get; set; }
+        public string GeneratedMessage { get; set; }
+    }
+}

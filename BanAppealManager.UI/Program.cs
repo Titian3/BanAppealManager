@@ -2,7 +2,6 @@ using BanAppealManager.Main;
 using BanAppealManager.Main.Scrapers.Forums;
 using BanAppealManager.Main.Scrapers.SS14Admin;
 using BanAppealManager.UI.Components;
-using BanAppealManager.UI.Services;
 using DotNetEnv;
 using Microsoft.Playwright;
 
@@ -49,9 +48,6 @@ builder.Services.AddSingleton<BanAppealService>(provider =>
     var forumScraper = provider.GetRequiredService<ForumAppealScraper>();
     return new BanAppealService(adminScraper, forumScraper, gptKey);
 });
-
-// Register ApiClientService
-builder.Services.AddHttpClient<ApiClientService>(); // Add this line
 
 var app = builder.Build();
 
