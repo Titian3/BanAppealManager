@@ -1,0 +1,254 @@
+@page "/CommandAndControl"
+@using BanAppealManager.UI.Services
+@using BanAppealManager.UI.Models
+@inject ApiClientService ApiClient
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<h3>Command and Control - Multi-Connection Manager.</h3>
+
+<div class="d-flex align-items-center mb-3">
+    <div class="form-check form-switch me-3">
+        <input class="form-check-input" type="checkbox" role="switch" id="autoModeSwitch" @bind="isAutoMode" />
+        <label class="form-check-label" for="autoModeSwitch">Automatic Mode</label>
+    </div>
+
+    <div class="input-group" style="width: 150px;">
+        <input type="number" class="form-control" id="intervalInput" @bind="interval" min="1" />
+        <button class="btn btn-secondary" @onclick="SaveSettings">Save</button>
+    </div>
+</div>
+
+<div class="progress mb-3" hidden="@(!isAutoMode)">
+    <div class="progress-bar" role="progressbar" style="width: @progressWidth%;" aria-valuenow="@progressWidth" aria-valuemin="0" aria-valuemax="100">@progressSeconds s</div>
+</div>
+
+<button class="btn btn-primary" @onclick="RefreshData">Refresh Data All Servers</button>
+<br /><br />
+
+<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                Player successfully kicked.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+    <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                Failed to kick player.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@if (serverStatuses != null)
+{
+    @foreach (var status in serverStatuses)
+    {
+        <div class="alert @(status.IsSuccess ? "alert-success" : "alert-danger") d-flex align-items-center" role="alert">
+            @if (status.IsSuccess)
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                </svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                    <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                </svg>
+            }
+            <div>
+                <strong>@status.Server:</strong> @status.StatusMessage<br/>
+                <small>Last Updated: @status.LastUpdated</small>
+            </div>
+        </div>
+    }
+}
+
+@if (players == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Server</th>
+                <th>UserID</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var player in players)
+            {
+                var isDuplicate = duplicateIds.Contains(player.UserId);
+                <tr class="@(isDuplicate ? "table-danger" : "")">
+                    <td>@player.Name</td>
+                    <td>@player.Server</td>
+                    <td>@player.UserId</td>
+                    <td>
+                        <button class="btn btn-danger" @onclick="() => KickPlayerHandler(player)">Kick</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Player> players;
+    private HashSet<string> duplicateIds = new HashSet<string>();
+    private List<ServerStatus> serverStatuses;
+    private bool isAutoMode;
+    private int interval = 60; // Default interval in seconds
+    private int progressSeconds;
+    private double progressWidth;
+    private CancellationTokenSource? autoModeCancellationTokenSource;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var servers = new List<(string Url, string Key)>
+        {
+            ("http://localhost:8081/server_api/Lizard", "Lizard"),
+            ("http://localhost:8086/server_api/Centipede", "Centipede")
+        };
+
+        players = new List<Player>();
+        serverStatuses = new List<ServerStatus>();
+
+        foreach (var server in servers)
+        {
+            try
+            {
+                var serverPlayers = await ApiClient.GetPlayers(server.Url, "123");
+                serverPlayers.ForEach(p => p.Server = server.Key);
+                players.AddRange(serverPlayers);
+                serverStatuses.Add(new ServerStatus
+                {
+                    Server = server.Key,
+                    IsSuccess = true,
+                    StatusMessage = "Success",
+                    LastUpdated = DateTime.Now
+                });
+            }
+            catch (Exception ex)
+            {
+                serverStatuses.Add(new ServerStatus
+                {
+                    Server = server.Key,
+                    IsSuccess = false,
+                    StatusMessage = $"Failed: {ex.Message}",
+                    LastUpdated = DateTime.Now
+                });
+            }
+        }
+
+        UpdateDuplicateIds();
+        StateHasChanged();
+    }
+
+    private void UpdateDuplicateIds()
+    {
+        duplicateIds = players.GroupBy(p => p.UserId)
+                              .Where(g => g.Count() > 1)
+                              .Select(g => g.Key)
+                              .ToHashSet();
+
+        players = players.OrderByDescending(p => duplicateIds.Contains(p.UserId))
+                         .ThenBy(p => p.Name)
+                         .ToList();
+    }
+
+    private async Task RefreshData()
+    {
+        players = null;
+        serverStatuses = null;
+        await LoadData();
+    }
+
+    private void KickPlayerHandler(Player player)
+    {
+        _ = KickPlayer(player);
+    }
+
+    private async Task KickPlayer(Player player)
+    {
+        bool isSuccess = await ApiClient.KickPlayer($"http://localhost:{(player.Server == "Lizard" ? "8081" : "8086")}/server_api/{player.Server}", "123", player.UserId, "Multiple connections detected");
+        
+        if (isSuccess)
+        {
+            players.RemoveAll(p => p.UserId == player.UserId);
+            UpdateDuplicateIds();
+            await ShowToast("successToast");
+        }
+        else
+        {
+            await ShowToast("errorToast");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ShowToast(string toastId)
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapInterop.showToast", toastId);
+    }
+
+    private async Task AutoModeLoop()
+    {
+        autoModeCancellationTokenSource = new CancellationTokenSource();
+        var token = autoModeCancellationTokenSource.Token;
+
+        while (!token.IsCancellationRequested)
+        {
+            if (!isAutoMode)
+            {
+                break;
+            }
+
+            progressSeconds = interval;
+            while (progressSeconds > 0 && isAutoMode)
+            {
+                progressWidth = (double)progressSeconds / interval * 100;
+                await Task.Delay(1000, token);
+                progressSeconds--;
+                StateHasChanged();
+            }
+
+            await RefreshData();
+            var duplicatePlayers = players.Where(p => duplicateIds.Contains(p.UserId)).ToList();
+            foreach (var player in duplicatePlayers)
+            {
+                await KickPlayer(player);
+            }
+        }
+
+        progressWidth = 0;
+        StateHasChanged();
+    }
+
+    private async Task SaveSettings()
+    {
+        if (isAutoMode)
+        {
+            autoModeCancellationTokenSource?.Cancel();
+            _ = AutoModeLoop();
+        }
+        else
+        {
+            autoModeCancellationTokenSource?.Cancel();
+        }
+    }
+}
