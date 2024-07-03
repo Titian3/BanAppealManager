@@ -1,4 +1,4 @@
-# Ban Appeal Processor
+# Ban Appeal Manager
 
 Ban Appeal Processor is a web application designed to streamline the processing of ban appeals for the SS14 project. It provides an interface for viewing and managing outstanding ban appeals and discussions. The application can gather stats, provide an overview of outstanding ban appeals, and process them by collating required info for an admin vote and generating an AI summarized description.
 
