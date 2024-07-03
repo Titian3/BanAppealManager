@@ -2,6 +2,7 @@
 @using BanAppealManager.Main
 @inject BanAppealService BanAppealService
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @rendermode InteractiveServer
 
 <PageTitle>Process Appeal</PageTitle>
@@ -77,6 +78,19 @@
     private ElementReference toastElement;
     private bool showToast = false;
     private bool isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Navigation.Uri);
+        if (uri.Query.Contains("url"))
+        {
+            var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            if (queryParams.TryGetValue("url", out var appealUrl))
+            {
+                appealForm.AppealUrl = appealUrl;
+            }
+        }
+    }
 
     private async Task HandleSubmit()
     {

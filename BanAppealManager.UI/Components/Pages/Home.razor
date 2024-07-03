@@ -1,10 +1,143 @@
 ﻿@page "/"
+@using BanAppealManager.Main.Scrapers.Forums.Category
+@using BanAppealManager.Main
+
+@inject BanAppealService BanAppealService
+@inject NavigationManager Navigation
+
+@rendermode InteractiveServer
 
 <PageTitle>Home</PageTitle>
 
 <h3>Welcome to Ban Appeal Processor</h3>
 
-<ul>
-    <li><NavLink href="processappeal">Process Appeal</NavLink></li>
-    <li><NavLink href="processdiscussion">Process Discussion</NavLink></li>
-</ul>
+@if (appeals == null)
+{
+    <p>Loading...</p>
+}
+else if (!appeals.Any())
+{
+    <div class="d-flex justify-content-between">
+        <div class="card" style="width: 18rem;">
+            <div class="card-header">
+                Ban Appeal Stats
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">Total Appeals: 0</li>
+                <li class="list-group-item">Oldest Appeal: N/A</li>
+            </ul>
+        </div>
+        <div class="card" style="width: 18rem;">
+            <div class="card-header">
+                Ban Appeal Discussion Stats
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">Total Discussions: N/A</li>
+                <li class="list-group-item">Oldest Discussion: N/A</li>
+            </ul>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between">
+        <div class="card" style="width: 18rem;">
+            <div class="card-header">
+                Ban Appeal Stats
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">Total Appeals: @appeals.Count</li>
+                <li class="list-group-item">Oldest Appeal: @GetOldestAppealDate()</li>
+            </ul>
+        </div>
+        <div class="card" style="width: 18rem;">
+            <div class="card-header">
+                Ban Appeal Discussion Stats
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">Total Discussions: N/A</li>
+                <li class="list-group-item">Oldest Discussion: N/A</li>
+            </ul>
+        </div>
+    </div>
+
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Post Name</th>
+                <th>Original Poster</th>
+                <th>Created</th>
+                <th>Age (days)</th>
+                <th>Process</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var appeal in sortedAppeals)
+            {
+                <tr class="@GetRowClass(CalculateAge(appeal.Created))">
+                    <td><a href="@appeal.LinkToAppeal" target="_blank">@appeal.PostName</a></td>
+                    <td>@appeal.OriginalPoster</td>
+                    <td>@appeal.Created</td>
+                    <td>@CalculateAge(appeal.Created)</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => ProcessAppeal(appeal.LinkToAppeal)">Process</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AppealSummary> appeals;
+    private List<AppealSummary> sortedAppeals;
+
+    protected override async Task OnInitializedAsync()
+    {
+        appeals = await BanAppealService.GetOutstandingAppealsAsync();
+        sortedAppeals = appeals.OrderByDescending(a => CalculateAge(a.Created)).ToList();
+    }
+
+    private string GetOldestAppealDate()
+    {
+        DateTime? oldestDate = null;
+        foreach (var appeal in appeals)
+        {
+            if (DateTime.TryParse(appeal.Created, out var createdDate))
+            {
+                if (!oldestDate.HasValue || createdDate < oldestDate.Value)
+                {
+                    oldestDate = createdDate;
+                }
+            }
+        }
+
+        return oldestDate.HasValue ? oldestDate.Value.ToString("MMM dd, yyyy h:mm tt") : "N/A";
+    }
+
+    private int CalculateAge(string created)
+    {
+        if (DateTime.TryParse(created, out var createdDate))
+        {
+            return (DateTime.Now - createdDate).Days;
+        }
+        return -1; // Return -1 if the date is invalid
+    }
+
+    private void ProcessAppeal(string appealUrl)
+    {
+        Navigation.NavigateTo($"/processappeal?url={Uri.EscapeDataString(appealUrl)}");
+    }
+
+    private string GetRowClass(int age)
+    {
+        return age switch
+        {
+            > 7 => "table-danger",
+            > 3 => "table-warning",
+            > 0 => "table-info",
+            0 => "table-success",
+            _ => string.Empty
+        };
+    }
+}

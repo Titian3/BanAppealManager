@@ -1,6 +1,8 @@
 using BanAppealManager.Main.API;
 using BanAppealManager.Main.ResponseTemplates;
 using BanAppealManager.Main.Scrapers.Forums;
+using BanAppealManager.Main.Scrapers.Forums.Category;
+using BanAppealManager.Main.Scrapers.Forums.Topic;
 using BanAppealManager.Main.Scrapers.SS14Admin;
 using BanAppealManager.Main.Summarizers;
 
@@ -10,14 +12,20 @@ namespace BanAppealManager.Main
     {
         private readonly UsernameLookupService _usernameLookupService;
         private readonly SS14AdminScraper _ss14AdminScraper;
-        private readonly ForumAppealScraper _forumAppealScraper;
+        private readonly ForumBanAppealScraper _forumBanAppealScraper;
         private readonly GPTConnector _gptConnector;
+        private readonly ForumBanAppealSummary _forumBanAppealSummary;
+        private int? _cachedAppealsCount;
+        private int? _cachedDiscussionsCount;
+        private DateTime _lastScrapeTimeAppeals;
+        private DateTime _lastScrapeTimeDiscussions;
 
-        public BanAppealService(SS14AdminScraper ss14AdminScraper, ForumAppealScraper forumAppealScraper, string apiKey)
+        public BanAppealService(SS14AdminScraper ss14AdminScraper, ForumBanAppealScraper forumBanAppealScraper, ForumBanAppealSummary forumBanAppealSummary, string apiKey)
         {
             _usernameLookupService = new UsernameLookupService();
             _ss14AdminScraper = ss14AdminScraper;
-            _forumAppealScraper = forumAppealScraper;
+            _forumBanAppealScraper = forumBanAppealScraper;
+            _forumBanAppealSummary = forumBanAppealSummary;
             _gptConnector = new GPTConnector(apiKey);
         }
 
@@ -38,7 +46,7 @@ namespace BanAppealManager.Main
             Console.WriteLine("Starting appeal processing...");
             Console.WriteLine($"Appeal URL: {appealUrl}");
             Console.WriteLine("Scraping appeal data...");
-            var appealData = await _forumAppealScraper.ScrapeAppealData(appealUrl);
+            var appealData = await _forumBanAppealScraper.ScrapeAppealData(appealUrl);
             Console.WriteLine($"Appeal data scraped successfully. Username extracted: {appealData.Username}");
 
             Console.WriteLine("Looking up user information...");
@@ -63,6 +71,11 @@ namespace BanAppealManager.Main
 
             Console.WriteLine("Appeal processing completed.");
             return template;
+        }
+        
+        public async Task<List<AppealSummary>> GetOutstandingAppealsAsync()
+        {
+            return await _forumBanAppealSummary.GetAppealSummariesAsync();
         }
     }
 }

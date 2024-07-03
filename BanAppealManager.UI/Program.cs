@@ -1,5 +1,7 @@
 using BanAppealManager.Main;
 using BanAppealManager.Main.Scrapers.Forums;
+using BanAppealManager.Main.Scrapers.Forums.Category;
+using BanAppealManager.Main.Scrapers.Forums.Topic;
 using BanAppealManager.Main.Scrapers.SS14Admin;
 using BanAppealManager.UI.Components;
 using DotNetEnv;
@@ -30,7 +32,7 @@ if (string.IsNullOrEmpty(gptKey))
 var playwright = await Playwright.CreateAsync();
 var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
 {
-    Headless = false,
+    Headless = true,
     Timeout = 20000 // Set global timeout here
 });
 
@@ -41,12 +43,14 @@ builder.Services.AddRazorComponents()
 // Register custom services
 builder.Services.AddSingleton(browser); // Register the browser instance
 builder.Services.AddSingleton<SS14AdminScraper>(_ => new SS14AdminScraper(adminUsername, adminPassword, browser));
-builder.Services.AddSingleton<ForumAppealScraper>(_ => new ForumAppealScraper(browser));
+builder.Services.AddSingleton<ForumBanAppealScraper>(_ => new ForumBanAppealScraper(browser));
+builder.Services.AddSingleton<ForumBanAppealSummary>(_ => new ForumBanAppealSummary(browser));
 builder.Services.AddSingleton<BanAppealService>(provider =>
 {
     var adminScraper = provider.GetRequiredService<SS14AdminScraper>();
-    var forumScraper = provider.GetRequiredService<ForumAppealScraper>();
-    return new BanAppealService(adminScraper, forumScraper, gptKey);
+    var forumScraper = provider.GetRequiredService<ForumBanAppealScraper>();
+    var forumSummaryScraper = provider.GetRequiredService<ForumBanAppealSummary>();
+    return new BanAppealService(adminScraper, forumScraper, forumSummaryScraper, gptKey);
 });
 
 var app = builder.Build();

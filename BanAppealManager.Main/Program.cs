@@ -1,4 +1,6 @@
 ﻿using BanAppealManager.Main.Scrapers.Forums;
+using BanAppealManager.Main.Scrapers.Forums.Category;
+using BanAppealManager.Main.Scrapers.Forums.Topic;
 using BanAppealManager.Main.Scrapers.SS14Admin;
 using DotNetEnv;
 using Microsoft.Playwright;
@@ -40,9 +42,10 @@ namespace BanAppealManager.Main
             
             var ss14AdminScraper = new SS14AdminScraper(adminUsername, adminPassword, browser);
 
-            var forumAppealScraper = new ForumAppealScraper(browser);
+            var forumAppealScraper = new ForumBanAppealScraper(browser);
+            var forumAppealScraperSummary = new ForumBanAppealSummary(browser);
             
-            var banAppealService = new BanAppealService(ss14AdminScraper, forumAppealScraper, gptKey);
+            var banAppealService = new BanAppealService(ss14AdminScraper, forumAppealScraper, forumAppealScraperSummary, gptKey);
             await banAppealService.ProcessAppealAsync(appealUrl);
 
             await browser.CloseAsync();

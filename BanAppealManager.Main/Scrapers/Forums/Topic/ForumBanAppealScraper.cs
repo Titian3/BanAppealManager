@@ -2,20 +2,13 @@ using System.Text;
 using BanAppealManager.Main.Models;
 using Microsoft.Playwright;
 
-namespace BanAppealManager.Main.Scrapers.Forums
+namespace BanAppealManager.Main.Scrapers.Forums.Topic
 {
-    public class ForumAppealScraper
+    public class ForumBanAppealScraper(IBrowser browser)
     {
-        private readonly IBrowser _browser;
-
-        public ForumAppealScraper(IBrowser browser)
-        {
-            _browser = browser;
-        }
-
         public async Task<AppealData> ScrapeAppealData(string appealUrl)
         {
-            var context = await _browser.NewContextAsync();
+            var context = await browser.NewContextAsync();
             var page = await context.NewPageAsync();
             page.SetDefaultTimeout(5000);
             await page.GotoAsync(appealUrl);
