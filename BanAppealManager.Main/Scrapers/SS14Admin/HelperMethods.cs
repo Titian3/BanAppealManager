@@ -37,6 +37,7 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
         public static string GetLatestBanReason(Userdetails userDetails)
         {
             var oldestBan = userDetails.Banlist
+                .Where(ban => ban.IsActive)
                 .OrderBy(ban => ban.BanTime) // Sort by BanTime in ascending order
                 .FirstOrDefault();
 

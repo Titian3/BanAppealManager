@@ -45,7 +45,7 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
                     isPermanent = true;
 
                     // Check if the permanent ban was unbanned
-                    if (expireTimeText.Contains("Unbanned"))
+                    if (expireTimeText.Contains("Unbanned:"))
                     {
                         isActive = false;
                         var unbanInfo = expireTimeText.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);

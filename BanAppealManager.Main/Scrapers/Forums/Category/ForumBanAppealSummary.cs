@@ -19,7 +19,6 @@ namespace BanAppealManager.Main.Scrapers.Forums.Category
         {
             var context = await _browser.NewContextAsync();
             var page = await context.NewPageAsync();
-            page.SetDefaultTimeout(5000);
             await page.GotoAsync("https://forum.spacestation14.com/c/ban-appeals/appeals-game/40/l/latest?assigned=nobody&status=open");
 
             var appeals = new List<AppealSummary>();

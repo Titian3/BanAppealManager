@@ -4,6 +4,7 @@
 
 @inject BanAppealService BanAppealService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 @rendermode InteractiveServer
 
@@ -124,9 +125,11 @@ else
         return -1; // Return -1 if the date is invalid
     }
 
-    private void ProcessAppeal(string appealUrl)
+    private async Task ProcessAppeal(string appealUrl)
     {
-        Navigation.NavigateTo($"/processappeal?url={Uri.EscapeDataString(appealUrl)}");
+        var processUrl = $"/processappeal?url={Uri.EscapeDataString(appealUrl)}";
+        await JS.InvokeVoidAsync("open", processUrl, "_blank");
+        await JS.InvokeVoidAsync("open", appealUrl, "_blank");
     }
 
     private string GetRowClass(int age)

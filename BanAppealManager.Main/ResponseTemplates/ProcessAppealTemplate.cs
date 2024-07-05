@@ -87,8 +87,11 @@ Ban type: **{appealData.BanType}**
 Ban Length: **{appealData.BanLength}**
 Ban time Served so far: **{banTimeServedText}**
 
-**Appeal Summary:**
+**Appeal Summary(Source: GPT4):**
 {gptResponse.AppealSummary}
+
+**Appeal Summary(Source: Human):**
+None.
 
 # Player History
 Player Username: {userDetails.Username}
