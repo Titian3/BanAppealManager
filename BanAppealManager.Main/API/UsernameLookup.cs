@@ -12,11 +12,11 @@ namespace BanAppealManager.Main.API
             _httpClient = new HttpClient();
         }
 
-        public async Task<usernameQueryResponse> GetUserDataAsync(string username)
+        public async Task<UsernameQueryResponse> GetUserDataAsync(string username)
         {
             var response = await _httpClient.GetAsync($"https://auth.spacestation14.com/api/query/name?name={username}");
             var content = await response.Content.ReadAsStringAsync();
-            var userData = JsonConvert.DeserializeObject<usernameQueryResponse>(content);
+            var userData = JsonConvert.DeserializeObject<UsernameQueryResponse>(content);
             return userData;
         }
     }

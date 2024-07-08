@@ -1,9 +1,14 @@
-﻿using BanAppealManager.Main.Scrapers.Forums;
+﻿using BanAppealManager.Main;
+using BanAppealManager.Main.Scrapers.Forums;
 using BanAppealManager.Main.Scrapers.Forums.Category;
 using BanAppealManager.Main.Scrapers.Forums.Topic;
 using BanAppealManager.Main.Scrapers.SS14Admin;
 using DotNetEnv;
 using Microsoft.Playwright;
+using System;
+using System.Threading.Tasks;
+using BanAppealManager.Main.Scrapers.Forums.Topic.BanDiscussions;
+using BanAppealManager.Main.Summarizers;
 
 namespace BanAppealManager.Main
 {
@@ -39,13 +44,26 @@ namespace BanAppealManager.Main
             
             Console.WriteLine("Enter the URL of the appeal:");
             string appealUrl = Console.ReadLine();
-            
-            var ss14AdminScraper = new SS14AdminScraper(adminUsername, adminPassword, browser);
+
+            var authHandler = new AuthHandler(adminUsername, adminPassword, browser);
+            var ss14AdminScraper = new SS14AdminScraper(authHandler);
+            var gptConnector = new GPTConnector(gptKey);
 
             var forumAppealScraper = new ForumBanAppealScraper(browser);
             var forumAppealScraperSummary = new ForumBanAppealSummary(browser);
+            var forumAppealDiscussionScraperSummary = new ForumBanAppealDiscussionSummary(browser, authHandler);
             
-            var banAppealService = new BanAppealService(ss14AdminScraper, forumAppealScraper, forumAppealScraperSummary, gptKey);
+            var forumAppealDiscussionScraper = new BanAppealDiscussionScraper(authHandler, appealUrl, gptConnector); // Adding missing initialization
+
+            var banAppealService = new BanAppealService(
+                ss14AdminScraper, 
+                forumAppealScraper, 
+                forumAppealScraperSummary, 
+                forumAppealDiscussionScraperSummary,
+                gptKey,
+                authHandler
+            );
+
             await banAppealService.ProcessAppealAsync(appealUrl);
 
             await browser.CloseAsync();

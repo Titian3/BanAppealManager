@@ -50,19 +50,51 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
             }
         }
 
-        public async Task<IPage> EnsureAuthenticatedAsync(string userID)
+        public async Task<IPage> EnsureAuthenticatedAsync(string url, bool isForum = false)
         {
             var context = await CreateOrLoadContextAsync();
             var page = await context.NewPageAsync();
 
             try
             {
-                await page.GotoAsync($"https://ss14-admin.spacestation14.com/Players/Info/{userID}");
+                var response = await page.GotoAsync(url);
 
-                if (page.Url.Contains("/Identity/Account/Login"))
+                if (response.Status == 404 && isForum)
                 {
-                    Console.WriteLine("Login page detected. Starting login process...");
-                    await LoginAsync(page);
+                    Console.WriteLine("Page not found. Starting login process...");
+                    await page.GotoAsync("https://forum.spacestation14.com/login");
+                    
+                    //force a wait here for 5s
+                    await Task.Delay(5000);
+                    
+                    // Check if we are on the account login page
+                    if (page.Url.Contains("account.spacestation14.com"))
+                    {
+                        await ForumLoginAsync(page);
+
+                        if (await page.Locator("text='Two-factor authentication'").CountAsync() > 0)
+                        {
+                            Console.WriteLine("Two-factor authentication required.");
+                            await HandleTwoFactorAuthenticationAsync(page);
+                            await SaveAuthStateAsync(context);
+                        }
+
+                        // Ensure we are on the categories page after login
+                        await page.GotoAsync("https://forum.spacestation14.com/categories");
+                    }
+
+                    // Navigate back to the original URL after login
+                    response = await page.GotoAsync(url);
+                }
+                else if (response.Status == 200 && page.Url.Contains("categories"))
+                {
+                    Console.WriteLine("Already logged in, navigating to the desired page.");
+                    response = await page.GotoAsync(url);
+                }
+                else if (page.Url.Contains("/Identity/Account/Login"))
+                {
+                    Console.WriteLine("Admin login page detected. Starting login process...");
+                    await AdminLoginAsync(page);
 
                     if (await page.Locator("text='Two-factor authentication'").CountAsync() > 0)
                     {
@@ -71,7 +103,8 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
                         await SaveAuthStateAsync(context);
                     }
 
-                    await page.GotoAsync($"https://ss14-admin.spacestation14.com/Players/Info/{userID}");
+                    // Navigate back to the original URL after login
+                    response = await page.GotoAsync(url);
                 }
 
                 Console.WriteLine("Authentication successful.");
@@ -79,12 +112,12 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during authentication for user ID {userID}: {ex.Message}");
+                Console.WriteLine($"Error during authentication: {ex.Message}");
                 throw;
             }
         }
 
-        private async Task LoginAsync(IPage page)
+        private async Task AdminLoginAsync(IPage page)
         {
             try
             {
@@ -92,11 +125,27 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
                 await page.FillAsync("#Input_Password", _adminPassword);
                 await page.CheckAsync("#Input_RememberMe");
                 await page.ClickAsync("button[type='submit']");
-                Console.WriteLine("Login completed successfully.");
+                Console.WriteLine("Admin login completed successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during login: {ex.Message}");
+                Console.WriteLine($"Error during admin login: {ex.Message}");
+                throw;
+            }
+        }
+
+        private async Task ForumLoginAsync(IPage page)
+        {
+            try
+            {
+                await page.FillAsync("#login-username", _adminUsername);
+                await page.FillAsync("#login-password", _adminPassword);
+                await page.ClickAsync("button[type='submit']");
+                Console.WriteLine("Forum login completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during forum login: {ex.Message}");
                 throw;
             }
         }

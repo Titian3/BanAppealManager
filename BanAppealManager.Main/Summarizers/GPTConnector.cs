@@ -7,7 +7,8 @@ namespace BanAppealManager.Main.Summarizers
     public class GPTConnector
     {
         private readonly HttpClient _httpClient;
-        private const string AssistantId = "asst_0C1X6H3wEG4BgWqt7boAt6lJ"; // Set your assistant ID here
+        private const string BanProcessingAssistantId = "asst_0C1X6H3wEG4BgWqt7boAt6lJ";
+        private const string DiscussionCommentProcessingAssistantId = "asst_93HDxlNV2YYkQSDexPRMiffL";
 
         public GPTConnector(string apiKey)
         {
@@ -42,11 +43,11 @@ namespace BanAppealManager.Main.Summarizers
             response.EnsureSuccessStatusCode();
         }
 
-        public async Task<string> CreateRunAsync(string threadId)
+        public async Task<string> CreateRunAsync(string threadId, string assistantId)
         {
             var runContent = new
             {
-                assistant_id = AssistantId
+                assistant_id = assistantId
             };
 
             var content = new StringContent(JsonConvert.SerializeObject(runContent), Encoding.UTF8, "application/json");
@@ -115,6 +116,7 @@ namespace BanAppealManager.Main.Summarizers
                 sb.AppendLine($"Unbanned By: {ban.UnbannedBy}");
                 sb.AppendLine();
             }
+
             return sb.ToString();
         }
 
@@ -134,9 +136,10 @@ namespace BanAppealManager.Main.Summarizers
                 sb.AppendLine($"Edited: {note.Edited}");
                 sb.AppendLine();
             }
+
             return sb.ToString();
         }
-        
+
         private string TransformRoleBanDetails(List<GroupedRoleBan> groupedRoleBans)
         {
             var sb = new StringBuilder();
@@ -151,10 +154,12 @@ namespace BanAppealManager.Main.Summarizers
                 sb.AppendLine($"Departments: {string.Join(", ", roleBan.Departments)}");
                 sb.AppendLine();
             }
+
             return sb.ToString();
         }
-        
-        public async Task<GPTResponse> GetSummaryAsync(AppealData appealData, Userdetails userDetails, string aHelpDetails)
+
+        public async Task<GPTResponseAppealProcessing> GetSummaryAsync(AppealData appealData, Userdetails userDetails,
+            string aHelpDetails)
         {
             try
             {
@@ -176,11 +181,41 @@ aHelp Details: {aHelpDetails},
 overallPlaytime: {userDetails.PlaytimeOverall}";
 
                 await AddMessageToThreadAsync(threadId, message);
-                var runId = await CreateRunAsync(threadId);
+                var runId = await CreateRunAsync(threadId, BanProcessingAssistantId);
                 var result = await GetRunResultAsync(threadId, runId);
 
                 // Deserialize the result
-                var gptResponse = JsonConvert.DeserializeObject<GPTResponse>(result);
+                var gptResponse = JsonConvert.DeserializeObject<GPTResponseAppealProcessing>(result);
+                return gptResponse;
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine($"Request error: {e.Message}");
+                throw;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Unexpected error: {e.Message}");
+                throw;
+            }
+        }
+
+
+        public async Task<GPTResponseDiscussionCommentProcessing> AnalyzeComment(string discussionComment)
+        {
+            try
+            {
+                var threadId = await CreateThreadAsync();
+                
+                var message =
+                    $@"Please analyze this comment: {discussionComment}";
+
+                await AddMessageToThreadAsync(threadId, message);
+                var runId = await CreateRunAsync(threadId, DiscussionCommentProcessingAssistantId);
+                var result = await GetRunResultAsync(threadId, runId);
+
+                // Deserialize the result
+                var gptResponse = JsonConvert.DeserializeObject<GPTResponseDiscussionCommentProcessing>(result);
                 return gptResponse;
             }
             catch (HttpRequestException e)
@@ -235,10 +270,23 @@ overallPlaytime: {userDetails.PlaytimeOverall}";
         [JsonProperty("data")] public RunMessage[] Data { get; set; }
     }
 
-    public class GPTResponse
+    public class GPTResponseAppealProcessing
     {
         [JsonProperty("SummarizedBanReason")] public string SummarizedBanReason { get; set; }
 
         [JsonProperty("AppealSummary")] public string AppealSummary { get; set; }
+    }
+    
+    public class GPTResponseDiscussionCommentProcessing
+    {
+        [JsonProperty("CommentVoteType")] public string CommentVoteType { get; set; }
+
+        [JsonProperty("ReductionLengthTimeInWeeks")] public int ReductionLengthTimeInWeeks { get; set; }
+        
+        [JsonProperty("CommentSentiment")] public string CommentSentiment { get; set; }
+
+        [JsonProperty("VotingReasons")] public List<string> VotingReasons { get; set; }
+        [JsonProperty("DiscussionOrDecision")] public string DiscussionOrDecision { get; set; }
+    
     }
 }

@@ -14,9 +14,9 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
         private readonly RoleBanScraper _roleBanScraper;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-        public SS14AdminScraper(string adminUsername, string adminPassword, IBrowser browser)
+        public SS14AdminScraper(AuthHandler authHandler)
         {
-            _authHandler = new AuthHandler(adminUsername, adminPassword, browser);
+            _authHandler = authHandler;
             _pageScraper = new PageScraper();
             _banScraper = new BanScraper();
             _roleBanScraper = new RoleBanScraper();
@@ -28,10 +28,12 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
             try
             {
                 Console.WriteLine($"Starting authentication for user ID: {userID}");
-                var page = await _authHandler.EnsureAuthenticatedAsync(userID);
-                Console.WriteLine($"Authentication successful for user ID: {userID}");
+                var ss14UserUrl = $"https://ss14-admin.spacestation14.com/Players/Info/{userID}";
+                var page = await _authHandler.EnsureAuthenticatedAsync(ss14UserUrl);
+                Console.WriteLine($"Authentication successful for user ID: {ss14UserUrl}");
 
                 Console.WriteLine($"Starting data extraction for user ID: {userID}");
+                
                 var userDetails = await _pageScraper.ExtractUserDetailsAsync(page, userID);
                 Console.WriteLine($"Data extraction successful for user ID: {userID}");
 

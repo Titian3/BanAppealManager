@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using BanAppealManager.Main.Scrapers.Forums.Category
 @using BanAppealManager.Main
+@using BanAppealManager.Main.Models
 
 @inject BanAppealService BanAppealService
 @inject NavigationManager Navigation
@@ -12,108 +13,177 @@
 
 <h3>Welcome to Ban Appeal Processor</h3>
 
-@if (appeals == null)
-{
-    <p>Loading...</p>
-}
-else if (!appeals.Any())
-{
-    <div class="d-flex justify-content-between">
-        <div class="card" style="width: 18rem;">
-            <div class="card-header">
-                Ban Appeal Stats
-            </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item">Total Appeals: 0</li>
-                <li class="list-group-item">Oldest Appeal: N/A</li>
-            </ul>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <div class="card-header">
-                Ban Appeal Discussion Stats
-            </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item">Total Discussions: N/A</li>
-                <li class="list-group-item">Oldest Discussion: N/A</li>
-            </ul>
-        </div>
-    </div>
-}
-else
-{
-    <div class="d-flex justify-content-between">
-        <div class="card" style="width: 18rem;">
-            <div class="card-header">
-                Ban Appeal Stats
-            </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item">Total Appeals: @appeals.Count</li>
-                <li class="list-group-item">Oldest Appeal: @GetOldestAppealDate()</li>
-            </ul>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <div class="card-header">
-                Ban Appeal Discussion Stats
-            </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item">Total Discussions: N/A</li>
-                <li class="list-group-item">Oldest Discussion: N/A</li>
-            </ul>
-        </div>
+<div class="container mt-5">
+    <div class="d-flex justify-content-between mb-3">
+        <h4>Outstanding Ban Appeals</h4>
+        <button class="btn btn-primary" @onclick="RefreshAppeals" disabled="@isAppealsLoading">
+            @if (isAppealsLoading)
+            {
+                <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
+                <span role="status">Loading...</span>
+            }
+            else
+            {
+                <span>Refresh Appeals</span>
+            }
+        </button>
     </div>
 
-    <table class="table table-striped mt-4">
-        <thead>
-            <tr>
-                <th>Post Name</th>
-                <th>Original Poster</th>
-                <th>Created</th>
-                <th>Age (days)</th>
-                <th>Process</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var appeal in sortedAppeals)
-            {
-                <tr class="@GetRowClass(CalculateAge(appeal.Created))">
-                    <td><a href="@appeal.LinkToAppeal" target="_blank">@appeal.PostName</a></td>
-                    <td>@appeal.OriginalPoster</td>
-                    <td>@appeal.Created</td>
-                    <td>@CalculateAge(appeal.Created)</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => ProcessAppeal(appeal.LinkToAppeal)">Process</button>
-                    </td>
+    @if (isAppealsLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading appeals...</span>
+            </div>
+        </div>
+    }
+    else if (appeals == null || !appeals.Any())
+    {
+        <p>No outstanding appeals found.</p>
+    }
+    else
+    {
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>Post Name</th>
+                    <th>Original Poster</th>
+                    <th>Created</th>
+                    <th>Age (days)</th>
+                    <th>Process</th>
                 </tr>
+            </thead>
+            <tbody>
+                @foreach (var appeal in sortedAppeals)
+                {
+                    <tr class="@GetRowClass(CalculateAge(appeal.Created))">
+                        <td><a href="@appeal.LinkToAppeal" target="_blank">@appeal.PostName</a></td>
+                        <td>@appeal.OriginalPoster</td>
+                        <td>@appeal.Created</td>
+                        <td>@CalculateAge(appeal.Created)</td>
+                        <td>
+                            <button class="btn btn-primary" @onclick="() => ProcessAppeal(appeal.LinkToAppeal)">Process</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <hr />
+
+    <div class="d-flex justify-content-between mb-3">
+        <h4>Outstanding Ban Appeal Discussions</h4>
+        <button class="btn btn-primary" @onclick="RefreshDiscussions" disabled="@isDiscussionsLoading">
+            @if (isDiscussionsLoading)
+            {
+                <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
+                <span role="status">Loading...</span>
             }
-        </tbody>
-    </table>
-}
+            else
+            {
+                <span>Refresh Discussions</span>
+            }
+        </button>
+    </div>
+
+    @if (isDiscussionsLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading discussions...</span>
+            </div>
+        </div>
+    }
+    else if (discussions == null || !discussions.Any())
+    {
+        <p>No outstanding discussions found.</p>
+    }
+    else
+    {
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>Post Name</th>
+                    <th>Replies</th>
+                    <th>Created</th>
+                    <th>Age (days)</th>
+                    <th>Process</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var discussion in sortedDiscussions)
+                {
+                    <tr class="@GetRowClass(CalculateAge(discussion.Created))">
+                        <td><a href="@discussion.LinkToDiscussion" target="_blank">@discussion.PostName</a></td>
+                        <td>@discussion.Replies</td>
+                        <td>@discussion.Created</td>
+                        <td>@CalculateAge(discussion.Created)</td>
+                        <td>
+                            <button class="btn btn-primary" @onclick="() => ProcessDiscussion(discussion.LinkToDiscussion)">Process</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
 
 @code {
     private List<AppealSummary> appeals;
     private List<AppealSummary> sortedAppeals;
+    private List<DiscussionSummary> discussions;
+    private List<DiscussionSummary> sortedDiscussions;
+    private bool isAppealsLoading = false;
+    private bool isDiscussionsLoading = false;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        appeals = await BanAppealService.GetOutstandingAppealsAsync();
-        sortedAppeals = appeals.OrderByDescending(a => CalculateAge(a.Created)).ToList();
+        // Initialize the tables empty
+        appeals = new List<AppealSummary>();
+        discussions = new List<DiscussionSummary>();
+        sortedAppeals = new List<AppealSummary>();
+        sortedDiscussions = new List<DiscussionSummary>();
     }
 
-    private string GetOldestAppealDate()
+    private async Task RefreshAppeals()
     {
-        DateTime? oldestDate = null;
-        foreach (var appeal in appeals)
+        isAppealsLoading = true;
+        StateHasChanged(); // Force re-render to show loading spinner
+        try
         {
-            if (DateTime.TryParse(appeal.Created, out var createdDate))
-            {
-                if (!oldestDate.HasValue || createdDate < oldestDate.Value)
-                {
-                    oldestDate = createdDate;
-                }
-            }
+            appeals = await BanAppealService.GetOutstandingAppealsAsync();
+            sortedAppeals = appeals.OrderByDescending(a => CalculateAge(a.Created)).ToList();
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing appeals: {ex.Message}");
+        }
+        finally
+        {
+            isAppealsLoading = false;
+            StateHasChanged(); // Force re-render to hide loading spinner
+        }
+    }
 
-        return oldestDate.HasValue ? oldestDate.Value.ToString("MMM dd, yyyy h:mm tt") : "N/A";
+    private async Task RefreshDiscussions()
+    {
+        isDiscussionsLoading = true;
+        StateHasChanged(); // Force re-render to show loading spinner
+        try
+        {
+            discussions = await BanAppealService.GetOutstandingAppealDiscussionsAsync();
+            sortedDiscussions = discussions.OrderByDescending(d => CalculateAge(d.Created)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing discussions: {ex.Message}");
+        }
+        finally
+        {
+            isDiscussionsLoading = false;
+            StateHasChanged(); // Force re-render to hide loading spinner
+        }
     }
 
     private int CalculateAge(string created)
@@ -130,6 +200,12 @@ else
         var processUrl = $"/processappeal?url={Uri.EscapeDataString(appealUrl)}";
         await JS.InvokeVoidAsync("open", processUrl, "_blank");
         await JS.InvokeVoidAsync("open", appealUrl, "_blank");
+    }
+
+    private async Task ProcessDiscussion(string discussionUrl)
+    {
+        var processDiscussionUrl = $"/processdiscussion?url={Uri.EscapeDataString(discussionUrl)}";
+        await JS.InvokeVoidAsync("open", processDiscussionUrl, "_blank");
     }
 
     private string GetRowClass(int age)

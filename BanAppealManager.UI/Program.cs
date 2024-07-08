@@ -2,6 +2,7 @@ using BanAppealManager.Main;
 using BanAppealManager.Main.Scrapers.Forums;
 using BanAppealManager.Main.Scrapers.Forums.Category;
 using BanAppealManager.Main.Scrapers.Forums.Topic;
+using BanAppealManager.Main.Scrapers.Forums.Topic.BanDiscussions;
 using BanAppealManager.Main.Scrapers.SS14Admin;
 using BanAppealManager.UI.Components;
 using DotNetEnv;
@@ -32,7 +33,7 @@ if (string.IsNullOrEmpty(gptKey))
 var playwright = await Playwright.CreateAsync();
 var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
 {
-    Headless = true,
+    Headless = false,
     Timeout = 20000 // Set global timeout here
 });
 
@@ -42,15 +43,22 @@ builder.Services.AddRazorComponents()
 
 // Register custom services
 builder.Services.AddSingleton(browser); // Register the browser instance
-builder.Services.AddSingleton<SS14AdminScraper>(_ => new SS14AdminScraper(adminUsername, adminPassword, browser));
+builder.Services.AddSingleton<AuthHandler>(_ => new AuthHandler(adminUsername, adminPassword, browser));
+builder.Services.AddSingleton<SS14AdminScraper>(provider => new SS14AdminScraper(provider.GetRequiredService<AuthHandler>()));
 builder.Services.AddSingleton<ForumBanAppealScraper>(_ => new ForumBanAppealScraper(browser));
 builder.Services.AddSingleton<ForumBanAppealSummary>(_ => new ForumBanAppealSummary(browser));
+builder.Services.AddSingleton<ForumBanAppealDiscussionSummary>(provider => new ForumBanAppealDiscussionSummary(
+    browser,
+    provider.GetRequiredService<AuthHandler>()
+));
 builder.Services.AddSingleton<BanAppealService>(provider =>
 {
     var adminScraper = provider.GetRequiredService<SS14AdminScraper>();
     var forumScraper = provider.GetRequiredService<ForumBanAppealScraper>();
     var forumSummaryScraper = provider.GetRequiredService<ForumBanAppealSummary>();
-    return new BanAppealService(adminScraper, forumScraper, forumSummaryScraper, gptKey);
+    var forumSummaryDiscussionScraper = provider.GetRequiredService<ForumBanAppealDiscussionSummary>();
+    var authHandler = provider.GetRequiredService<AuthHandler>();
+    return new BanAppealService(adminScraper, forumScraper, forumSummaryScraper, forumSummaryDiscussionScraper, gptKey, authHandler);
 });
 
 var app = builder.Build();

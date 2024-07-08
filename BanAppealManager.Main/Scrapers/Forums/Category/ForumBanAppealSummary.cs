@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BanAppealManager.Main.Models;
 using Microsoft.Playwright;
 
 namespace BanAppealManager.Main.Scrapers.Forums.Category
@@ -109,11 +110,5 @@ namespace BanAppealManager.Main.Scrapers.Forums.Category
         }
     }
 
-    public class AppealSummary
-    {
-        public string PostName { get; set; }
-        public string Created { get; set; }
-        public string LinkToAppeal { get; set; }
-        public string OriginalPoster { get; set; }
-    }
+    
 }

@@ -6,7 +6,7 @@ namespace BanAppealManager.Main.ResponseTemplates
 {
     public static class ProcessAppealTemplate
     {
-        public static string Generate(AppealData appealData, Userdetails userDetails, GPTResponse gptResponse, string ahelpLink)
+        public static string Generate(AppealData appealData, Userdetails userDetails, GPTResponseAppealProcessing gptResponseAppealProcessing, string ahelpLink)
         {
             string banTimeServedText;
             string oldestActiveBanReason;
@@ -80,7 +80,7 @@ namespace BanAppealManager.Main.ResponseTemplates
             }
 
             return $@"
-{userDetails.Username} - {gptResponse.SummarizedBanReason}
+{userDetails.Username} - {gptResponseAppealProcessing.SummarizedBanReason}
 
 # Summary
 Ban type: **{appealData.BanType}**
@@ -88,7 +88,7 @@ Ban Length: **{appealData.BanLength}**
 Ban time Served so far: **{banTimeServedText}**
 
 **Appeal Summary(Source: GPT4):**
-{gptResponse.AppealSummary}
+{gptResponseAppealProcessing.AppealSummary}
 
 **Appeal Summary(Source: Human):**
 None.

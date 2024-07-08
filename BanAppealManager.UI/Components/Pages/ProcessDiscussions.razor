@@ -1,38 +1,357 @@
 @page "/processdiscussion"
 @using BanAppealManager.Main
+@using BanAppealManager.Main.Models
 @inject BanAppealService BanAppealService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
 
-@* Just a front end mock, Needs Backend TODO *@
 <PageTitle>Process Discussion</PageTitle>
 
 <div class="container mt-5">
     <h2>Process Discussion</h2>
-    <EditForm Model="@decisionForm" OnValidSubmit="HandleDecisionSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-        <div class="mb-3">
-            <label for="decisionUrl" class="form-label">Appeal Discussion URL</label>
-            <InputText id="decisionUrl" class="form-control" @bind-Value="decisionForm.DecisionUrl" required />
+    <div class="accordion" id="accordionPanelsStayOpenExample">
+        <!-- Start Processing Discussion -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
+                    Start Processing Discussion
+                </button>
+            </h2>
+            <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                    <EditForm Model="@decisionForm" OnValidSubmit="HandleDecisionSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3">
+                            <label for="decisionUrl" class="form-label">Appeal Discussion URL</label>
+                            <InputText id="decisionUrl" class="form-control" @bind-Value="decisionForm.DecisionUrl" required />
+                        </div>
+                        <!-- Submit Button with Loading Indicator -->
+                        <button class="btn btn-primary" type="submit" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
+                                <span role="status">Loading...</span>
+                            }
+                            else
+                            {
+                                <span>Process Discussion</span>
+                            }
+                        </button>
+                        <!-- Spinner below the submit button -->
+                        @if (isLoading)
+                        {
+                            <div class="d-flex justify-content-center mt-3">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Generating message...</span>
+                                </div>
+                                <span class="ms-2">Generating message...</span>
+                            </div>
+                        }
+                    </EditForm>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="generatedMessage" class="form-label">Generated Message</label>
-            <InputTextArea id="generatedMessage" class="form-control" @bind-Value="decisionForm.GeneratedMessage" rows="6" />
+
+        <!-- Discussion Details and Vote Options -->
+        <div class="accordion-item" id="accordionTwo">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed @accordionClassTwo" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo" disabled="@isDisabledTwo">
+                    Discussion Details and Vote Options - @statusTwo
+                </button>
+            </h2>
+            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    @if (banDiscussionAnalysis != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card" style="width: 100%; margin: 1rem;">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><strong>Ban Type:</strong> @banDiscussionAnalysis.BanType</li>
+                                        <li class="list-group-item"><strong>Total Votes:</strong> @banDiscussionAnalysis.TotalVotes</li>
+                                        @if (banDiscussionAnalysis.MedianReductionTime.HasValue && banDiscussionAnalysis.MedianReductionTime.Value > 0)
+                                        {
+                                            <li class="list-group-item"><strong>Median Reduction Time:</strong> @banDiscussionAnalysis.MedianReductionTime.Value weeks</li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="accordion mt-4" id="accordionVoteOptions">
+                                    @foreach (var voteOption in banDiscussionAnalysis.VotingOptions)
+                                    {
+                                        var optionId = $"voteOption{voteOption.OptionText.GetHashCode()}";
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@optionId" aria-expanded="false" aria-controls="@optionId">
+                                                    @voteOption.OptionText - @voteOption.Percentage% (@voteOption.VoteCount)
+                                                </button>
+                                            </h2>
+                                            <div id="@optionId" class="accordion-collapse collapse">
+                                                <div class="accordion-body">
+                                                    <ul class="list-group list-group-flush">
+                                                        @foreach (var voter in voteOption.Voters)
+                                                        {
+                                                            <li class="list-group-item">@voter</li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary">Generate Message</button>
-    </EditForm>
+
+        <!-- Generated Response -->
+        <div class="accordion-item" id="accordionThree">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed @accordionClassThree" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseThree" aria-expanded="false" aria-controls="panelsStayOpen-collapseThree" disabled="@isDisabledThree">
+                    Generated Response - @statusThree
+                </button>
+            </h2>
+            <div id="panelsStayOpen-collapseThree" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    @if (banDiscussionAnalysis != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mt-4">
+                                    <h4>Generated Message</h4>
+                                    <textarea class="form-control" id="generatedMessage" rows="@templateRows" @bind="generatedMessage"></textarea>
+                                    <button class="btn btn-secondary mt-2" @onclick="CopyToClipboard">Copy Message</button>
+                                    <button class="btn btn-primary mt-2 float-end" @onclick="RebuildTemplate">Rebuild Template</button>
+                                    <div class="mt-4">
+                                        <label for="closingRemarks" class="form-label">Closing Remarks</label>
+                                        <InputText id="closingRemarks" class="form-control" @bind-Value="closingRemarks" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h5>Vote Reasons</h5>
+                                <ul class="list-group">
+                                    @foreach (var reason in banDiscussionAnalysis.VoteReasonsList.Select((reason, index) => new { reason, index }))
+                                    {
+                                        <li class="list-group-item">
+                                            <input class="form-check-input me-1" type="checkbox" @bind="@voteReasonsChecked[reason.index]" id="@($"reasonCheckbox{reason.index}")">
+                                            <label class="form-check-label stretched-link" for="@($"reasonCheckbox{reason.index}")">@reason.reason</label>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Verification Checklist -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseFour" aria-expanded="false" aria-controls="panelsStayOpen-collapseFour">
+                    Manual Verification Checklist
+                </button>
+            </h2>
+            <div id="panelsStayOpen-collapseFour" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    <div class="mb-3">
+                        <h4>Checklist</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkEvasion" />
+                            <label class="form-check-label" for="checkEvasion">
+                                Check for evasion
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkDecision" />
+                            <label class="form-check-label" for="checkDecision">
+                                Discussion decision
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkReplied" />
+                            <label class="form-check-label" for="checkReplied">
+                                Discussion replied to
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkSolved" />
+                            <label class="form-check-label" for="checkSolved">
+                                Discussion solved
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkModified" />
+                            <label class="form-check-label" for="checkModified">
+                                Ban modified
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkAppealReplied" />
+                            <label class="form-check-label" for="checkAppealReplied">
+                                Ban appeal replied to
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkAppealSolved" />
+                            <label class="form-check-label" for="checkAppealSolved">
+                                Ban appeal solved
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkTagsUpdated" />
+                            <label class="form-check-label" for="checkTagsUpdated">
+                                Ban appeal tags updated
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    <div class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true" @ref="toastElement">
+        <div class="d-flex">
+            <div class="toast-body">
+                @submitResult
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
 </div>
 
 @code {
-    private DecisionForm decisionForm = new();
+    private DecisionForm decisionForm = new DecisionForm();
+    private BanDiscussionAnalysisResponse banDiscussionAnalysis;
+    private string submitResult;
+    private int templateRows = 6;
+    private ElementReference toastElement;
+    private bool showToast = false;
+    private bool isLoading = false;
+    private bool[] voteReasonsChecked;
+    private string generatedMessage = "Start by entering Link to discussion and hit process.";
+    private string closingRemarks = "Closing with outcome";
+    private string accordionClassTwo = "btn btn-warning";
+    private string accordionClassThree = "btn btn-warning";
+    private string statusTwo = "Not Started Processing";
+    private string statusThree = "Not Started Processing";
+    private bool isDisabledTwo = true;
+    private bool isDisabledThree = true;
 
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Navigation.Uri);
+        if (uri.Query.Contains("url"))
+        {
+            var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            if (queryParams.TryGetValue("url", out var discussionUrl))
+            {
+                decisionForm.DecisionUrl = discussionUrl;
+            }
+        }
+    }
+    
     private async Task HandleDecisionSubmit()
     {
-        // Implement decision submit logic
+        isLoading = true;
+        StateHasChanged(); // Force re-render to show loading spinner
+        submitResult = "Generating message...";
+        statusTwo = "Pending";
+        statusThree = "Pending";
+        try
+        {
+            banDiscussionAnalysis = await BanAppealService.ProcessDiscussionAsync(decisionForm.DecisionUrl);
+            voteReasonsChecked = new bool[banDiscussionAnalysis.VoteReasonsList.Count]; // Initialize the checkbox state
+            UpdateGeneratedMessage(); // Update the generated message initially
+            UpdateClosingRemarks(); // Update closing remarks
+
+            // Update accordion classes and status
+            accordionClassTwo = "btn btn-success";
+            accordionClassThree = "btn btn-success";
+            statusTwo = "Completed";
+            statusThree = "Completed";
+            isDisabledTwo = false;
+            isDisabledThree = false;
+
+            submitResult = "Message generated successfully.";
+            AdjustTextareaSize();
+
+            // Open the second and third accordions
+            await JS.InvokeVoidAsync("eval", "document.querySelector('#panelsStayOpen-collapseOne').classList.remove('show')");
+            await JS.InvokeVoidAsync("eval", "document.querySelector('#panelsStayOpen-collapseTwo').classList.add('show')");
+            await JS.InvokeVoidAsync("eval", "document.querySelector('#panelsStayOpen-collapseThree').classList.add('show')");
+            
+            await JS.InvokeVoidAsync("open", decisionForm.DecisionUrl, "_blank");
+            await JS.InvokeVoidAsync("open", banDiscussionAnalysis.CurrentAppeal, "_blank");
+        }
+        catch (Exception ex)
+        {
+            submitResult = $"Error generating message: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Force re-render to hide loading spinner
+            showToast = true;
+        }
+    }
+
+    private void UpdateGeneratedMessage()
+    {
+        var selectedReasons = banDiscussionAnalysis.VoteReasonsList
+            .Where((reason, index) => voteReasonsChecked[index])
+            .Select(reason => $"- {char.ToUpper(reason[0]) + reason.Substring(1)}.")
+            .ToList();
+
+        generatedMessage = $"{banDiscussionAnalysis.ResponseTemplateSection1}\n\nThe reasons provided in the discussion for this decision were the following:\n" +
+                           $"{string.Join("\n", selectedReasons)}\n\n{banDiscussionAnalysis.ResponseTemplateSection2}\n";
+        AdjustTextareaSize();
+    }
+
+    private void UpdateClosingRemarks()
+    {
+        closingRemarks = banDiscussionAnalysis.OutcomeType == "Reduction"
+            ? $"Closing with {banDiscussionAnalysis.OutcomeType} with a {banDiscussionAnalysis.MedianReductionTime} Weeks"
+            : $"Closing with {banDiscussionAnalysis.OutcomeType}";
+    }
+
+    private void RebuildTemplate()
+    {
+        UpdateGeneratedMessage();
+    }
+
+    private async Task CopyToClipboard()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", generatedMessage);
+    }
+
+    private void AdjustTextareaSize()
+    {
+        var lineCount = generatedMessage.Split('\n').Length;
+        templateRows = lineCount < 6 ? 6 : lineCount;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (showToast)
+        {
+            showToast = false;
+            var toast = await JS.InvokeAsync<IJSObjectReference>("bootstrap.Toast.getOrCreateInstance", toastElement);
+            await toast.InvokeVoidAsync("show");
+        }
     }
 
     public class DecisionForm
     {
+        [Required]
         public string DecisionUrl { get; set; }
-        public string GeneratedMessage { get; set; }
     }
 }
