@@ -98,7 +98,7 @@ namespace BanAppealManager.Main.Scrapers.Forums.Topic.BanDiscussions
             {
                 // Even number of elements, take the average of the two middle elements
                 int midIndex = count / 2;
-                return (nonZeroReductionLengths[midIndex - 1] + nonZeroReductionLengths[midIndex]) / 2;
+                return (int)Math.Round((nonZeroReductionLengths[midIndex - 1] + nonZeroReductionLengths[midIndex]) / 2.0);
             }
             else
             {
