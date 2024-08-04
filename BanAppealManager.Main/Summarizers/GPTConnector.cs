@@ -12,7 +12,10 @@ namespace BanAppealManager.Main.Summarizers
 
         public GPTConnector(string apiKey)
         {
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(2),
+            };
             _httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
             _httpClient.DefaultRequestHeaders.Add("OpenAI-Beta", "assistants=v2");
@@ -205,22 +208,34 @@ overallPlaytime: {userDetails.PlaytimeOverall}";
         {
             try
             {
+                Console.WriteLine("Starting AnalyzeComment method.");
+        
                 var threadId = await CreateThreadAsync();
-                
-                var message =
-                    $@"Please analyze this comment: {discussionComment}";
+                Console.WriteLine($"Thread created with ID: {threadId}");
 
+                var message = $@"Please analyze this comment: {discussionComment}";
                 await AddMessageToThreadAsync(threadId, message);
+                Console.WriteLine("Message added to thread.");
+
                 var runId = await CreateRunAsync(threadId, DiscussionCommentProcessingAssistantId);
+                Console.WriteLine($"Run created with ID: {runId}");
+
                 var result = await GetRunResultAsync(threadId, runId);
+                Console.WriteLine("Run result retrieved.");
 
                 // Deserialize the result
                 var gptResponse = JsonConvert.DeserializeObject<GPTResponseDiscussionCommentProcessing>(result);
+                Console.WriteLine("Result deserialized successfully.");
+
                 return gptResponse;
             }
             catch (HttpRequestException e)
             {
                 Console.WriteLine($"Request error: {e.Message}");
+                if (e.InnerException is TimeoutException)
+                {
+                    Console.WriteLine("The request timed out.");
+                }
                 throw;
             }
             catch (Exception e)
