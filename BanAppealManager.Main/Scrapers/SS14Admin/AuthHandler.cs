@@ -138,7 +138,7 @@ namespace BanAppealManager.Main.Scrapers.SS14Admin
         {
             try
             {
-                await page.FillAsync("#login-username", _adminUsername);
+                await page.FillAsync("#Input_EmailOrUsername", _adminUsername);
                 await page.FillAsync("#login-password", _adminPassword);
                 await page.ClickAsync("button[type='submit']");
                 Console.WriteLine("Forum login completed successfully.");
